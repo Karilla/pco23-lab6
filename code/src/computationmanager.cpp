@@ -20,7 +20,12 @@ ComputationManager::ComputationManager(int maxQueueSize): MAX_TOLERATED_QUEUE_SI
 }
 
 int ComputationManager::requestComputation(Computation c) {
-    // TODO
+    monitorIn();
+    if(bufferSize >= MAX_TOLERATED_QUEUE_SIZE){
+        wait(accessBuffer);
+    }
+    buffer.push_front(c);
+    monitorOut();
     return -1;
 }
 

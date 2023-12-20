@@ -17,8 +17,11 @@
 // Ajoutez les includes dont vous avez besoin ici
 
 #include <memory>
+#include <forward_list>
 
 #include "pcosynchro/pcohoaremonitor.h"
+#include "pcosynchro/pcoconditionvariable.h"
+#include "pcosynchro/pcomutex.h"
 
 /**
  * @brief The ComputationType enum represents the abstract computation types that are available
@@ -185,6 +188,13 @@ protected:
     // Ajoutez vos attributs et déclarations de méthodes ici
     // P.ex. variables conditions et structure de données pour le buffer
 
+    std::forward_list<Computation> buffer;
+    int writePointer;
+    int readPointer;
+    int bufferSize;
+    PcoConditionVariable accessBuffer;
+    PcoMutex mutex;
+    PcoSemaphore waitNotFull, waitNotEmpty;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
 
