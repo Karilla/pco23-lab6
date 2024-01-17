@@ -24,9 +24,11 @@ int ComputationManager::requestComputation(Computation c) {
     if(bufferSize >= MAX_TOLERATED_QUEUE_SIZE){
         wait(accessBuffer);
     }
-    buffer.push_front(c);
+    bufferSize++;
+    Request req (c, id++);
+    buffer[c.computationType].push_front(req);
     monitorOut();
-    return -1;
+    return id;
 }
 
 void ComputationManager::abortComputation(int id) {
@@ -39,24 +41,22 @@ Result ComputationManager::getNextResult() {
 
     // Filled with some code in order to make the thread in the UI wait
     monitorIn();
-    auto c = Condition();
-    wait(c);
+
     monitorOut();
 
     return Result(-1, 0.0);
 }
 
 Request ComputationManager::getWork(ComputationType computationType) {
-    // TODO
-    // Replace all of the code below by your code
-
-    // Filled with arbitrary code in order to make the callers wait
     monitorIn();
-    auto c = Condition();
-    wait(c);
+    if(buffer[computationType].empty()){
+        //TODO: On attend
+    }
+    Request newReq = buffer[computationType].front();
+    buffer[computationType].pop_front();
     monitorOut();
 
-    return Request(Computation(computationType), -1);
+    return newReq;
 }
 
 bool ComputationManager::continueWork(int id) {

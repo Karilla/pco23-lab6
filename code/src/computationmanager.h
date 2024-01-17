@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <forward_list>
+#include <map>
 
 #include "pcosynchro/pcohoaremonitor.h"
 #include "pcosynchro/pcoconditionvariable.h"
@@ -48,6 +49,7 @@ public:
      * @brief data The data for the computation
      */
     std::shared_ptr<std::vector<double>> data;
+    
 };
 
 /**
@@ -188,13 +190,15 @@ protected:
     // Ajoutez vos attributs et déclarations de méthodes ici
     // P.ex. variables conditions et structure de données pour le buffer
 
-    std::forward_list<Computation> buffer;
+    std::map<ComputationType, std::forward_list<Request>> buffer;
+    std::forward_list<Result> results;
     int writePointer;
     int readPointer;
     int bufferSize;
-    PcoConditionVariable accessBuffer;
+    Condition accessBuffer;
     PcoMutex mutex;
     PcoSemaphore waitNotFull, waitNotEmpty;
+    static unsigned id;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
 
