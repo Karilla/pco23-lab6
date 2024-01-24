@@ -13,6 +13,7 @@
 
 #include "computationmanager.h"
 #include <iostream>
+#include <algorithm>
 
 ComputationManager::ComputationManager(int maxQueueSize): MAX_TOLERATED_QUEUE_SIZE(maxQueueSize)
 {
@@ -62,6 +63,7 @@ Request ComputationManager::getWork(ComputationType computationType) {
     }
     Request newReq = buffer[computationType].front();
     buffer[computationType].pop_front();
+    results.emplace_front(newReq.getId(),std::nullopt);
     monitorOut();
 
     return newReq;
@@ -74,7 +76,13 @@ bool ComputationManager::continueWork(int id) {
 
 void ComputationManager::provideResult(Result result) {
     monitorIn();
-    results.push_front(result);
+    auto it = std::find_if(results.begin(), results.end(),
+                           [&](const auto& pairIdResult){ return pairIdResult.first == result.getId();});
+    if(it == results.end()){
+       monitorOut();
+       return;
+    }
+    it->second = result;
     signal(emptyResult);
     monitorOut();
 }

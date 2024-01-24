@@ -21,6 +21,7 @@
 #include <map>
 #include <vector>
 #include <queue>
+#include <optional>
 
 #include "pcosynchro/pcohoaremonitor.h"
 #include "pcosynchro/pcoconditionvariable.h"
@@ -186,6 +187,7 @@ public:
     bool continueWork(int id) override;
     void provideResult(Result result) override;
 
+
     // Control Interface
     /**
      * @brief stop Is used when the buffer is stopped, will release and interrupt waiting threads
@@ -198,7 +200,8 @@ protected:
     // P.ex. variables conditions et structure de données pour le buffer
 
     std::map<ComputationType, std::forward_list<Request>> buffer;
-    std::forward_list<Result> results;
+    //::forward_list<Result> results;
+    std::forward_list<std::pair<int, std::optional<Result>>> results;
     static int expectedResult;
     std::array<Condition,3> conditionsComputationType;
     int bufferSize;
