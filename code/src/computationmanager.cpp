@@ -22,58 +22,106 @@ ComputationManager::ComputationManager(int maxQueueSize): MAX_TOLERATED_QUEUE_SI
 int ComputationManager::nextId = 0;
 int ComputationManager::expectedResult = 0;
 
+// Cette méthode permet de demander d’effectuer un calcul et retourne un identifiant (id), donné
+//par le buffer, correspondant au calcul.
 int ComputationManager::requestComputation(Computation c) {
     monitorIn();
+    // Si le buffer est plein, on attend
     if(bufferSize >= MAX_TOLERATED_QUEUE_SIZE){
-        wait(accessBuffer);
+       if(stopped) {
+          monitorOut();
+          throwStopException();
+       }
+        wait(bufferFull);
+       if(stopped) {
+          signal(bufferFull);
+          monitorOut();
+          throwStopException();
+       }
     }
     bufferSize++;
     unsigned int id = nextId;
     Request req (c, nextId++);
     buffer[c.computationType].push_front(req);
+    signal(computationTypeEmpty[(int)c.computationType]);
     monitorOut();
     return id;
 }
 
+// Cette méthode permet d’annuler un calcul en cours grâce à son identifiant.
 void ComputationManager::abortComputation(int id) {
     // TODO
 }
 
+// Cette méthode permet de demander les résultats au buffer. Les résultats seront retournés dans
+//le même ordre que l’ordre des demandes de calcul. Cette méthode ne doit pas retourner les
+//résultats de calculs qui ont été annulés. Elle est potentiellement bloquante.
 Result ComputationManager::getNextResult() {
     monitorIn();
 
-    while(results.empty() or results.front().getId() != expectedResult){
+    // Si il n'y a pas de résultat ou que le résultat n'est pas celui attendu, on attend
+    while(results.empty() or results.front().first != expectedResult){
+         if(stopped) {
+             monitorOut();
+             throwStopException();
+         }
         wait(emptyResult);
+         if(stopped) {
+             signal(emptyResult);
+             monitorOut();
+             throwStopException();
+         }
         results.sort();
     }
 
-    Result result = results.front();
-
+    Result result = results.front().second.value();
     results.pop_front();
-
+    expectedResult++;
     monitorOut();
 
     return result;
 }
 
+// Cette méthode permet au calculateur de demander du travail du type computationType,
+//qu’il reçoit sous forme d’une requête de calcul.
 Request ComputationManager::getWork(ComputationType computationType) {
     monitorIn();
+    // Si il n'a a pas de computation du bon type dans le buffer, on attend
     if(buffer[computationType].empty()){
-        wait(conditionsComputationType[(int)computationType]);
+         if(stopped) {
+            monitorOut();
+            throwStopException();
+         }
+        wait(computationTypeEmpty[(int)computationType]);
+         if(stopped) {
+            signal(computationTypeEmpty[(int)computationType]);
+            monitorOut();
+            throwStopException();
+         }
     }
     Request newReq = buffer[computationType].front();
     buffer[computationType].pop_front();
+    bufferSize--;
+    signal(bufferFull);
     results.emplace_front(newReq.getId(),std::nullopt);
     monitorOut();
 
     return newReq;
 }
 
+// Cette méthode permet au calculateur de demander s’il doit continuer à travailler sur le calcul
+//avec l’identifiant donné.
 bool ComputationManager::continueWork(int id) {
-    // TODO
+    monitorIn();
+    if(stopped){
+       monitorOut();
+       return false;
+    }
+    monitorOut();
     return true;
 }
 
+// Cette méthode permet au calculateur de retourner le résultat du calcul.
 void ComputationManager::provideResult(Result result) {
     monitorIn();
     auto it = std::find_if(results.begin(), results.end(),
@@ -87,6 +135,19 @@ void ComputationManager::provideResult(Result result) {
     monitorOut();
 }
 
+// la fonction stop() devra libérer tous les threads en attente sur le buffer et devra empêcher la mise en
+//attente de tout thread lors d’un appel à une méthode du buffer après l’appel de stop().
 void ComputationManager::stop() {
-    // TODO
+
+   monitorIn();
+   stopped = true;
+   // On signale sur toutes les conditions existantes
+   signal(bufferFull);
+   signal(emptyResult);
+   signal(notExpectedResult);
+   for (auto &condition: computationTypeEmpty) {
+      signal(condition);
+   }
+
+   monitorOut();
 }

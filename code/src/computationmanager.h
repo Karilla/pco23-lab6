@@ -200,14 +200,11 @@ protected:
     // P.ex. variables conditions et structure de données pour le buffer
 
     std::map<ComputationType, std::forward_list<Request>> buffer;
-    //::forward_list<Result> results;
     std::forward_list<std::pair<int, std::optional<Result>>> results;
     static int expectedResult;
-    std::array<Condition,3> conditionsComputationType;
+    std::array<Condition,3> computationTypeEmpty;
     int bufferSize;
-    Condition accessBuffer, emptyResult, notExpectedResult;
-    PcoMutex mutex;
-    PcoSemaphore waitNotFull, waitNotEmpty;
+    Condition bufferFull, emptyResult, notExpectedResult;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
 
