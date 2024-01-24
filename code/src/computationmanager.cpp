@@ -50,7 +50,43 @@ int ComputationManager::requestComputation(Computation c) {
 
 // Cette méthode permet d’annuler un calcul en cours grâce à son identifiant.
 void ComputationManager::abortComputation(int id) {
-    // TODO
+
+   monitorIn();
+   // On cherche la requête dans le buffer et on la supprime si on la trouve
+   for(auto& list : buffer){
+      auto it = std::find_if(list.second.begin(), list.second.end(),
+                             [&](const auto& request){ return request.getId() == id;});
+      // Si la requête est trouvée
+      if(it != list.second.end()){
+         auto prevIt = list.second.before_begin();
+         while (std::next(prevIt) != it) {
+            ++prevIt;
+         }
+         list.second.erase_after(prevIt);
+         bufferSize--;
+         signal(bufferFull);
+         monitorOut();
+         return;
+      }
+   }
+
+   // On cherche si la requête est dans les résultats (i.e. en cours de calcul ou calculée)
+   auto it = std::find_if(results.begin(), results.end(),
+                          [&](const auto& pairIdResult){ return pairIdResult.first == id;});
+   if(it != results.end()){
+      // Si c'est un résultat en cours de calcul, on signale pour débloquer le thred qui l'attend
+      if(it->second.has_value() and it->first == expectedResult){
+         expectedResult++;
+         signal(emptyResult);
+      }
+      auto prevIt = results.before_begin();
+      while (std::next(prevIt) != it) {
+         ++prevIt;
+      }
+      results.erase_after(prevIt);
+      monitorOut();
+      return;
+   }
 }
 
 // Cette méthode permet de demander les résultats au buffer. Les résultats seront retournés dans

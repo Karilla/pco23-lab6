@@ -178,7 +178,7 @@ public:
     // Client Interface
     // Documentation above
     int requestComputation(Computation c) override;
-    void abortComputation(int id) override;
+    void abortComputation(int request) override;
     Result getNextResult() override;
 
     // Compute Engine Interface
