@@ -19,6 +19,8 @@
 #include <memory>
 #include <forward_list>
 #include <map>
+#include <vector>
+#include <queue>
 
 #include "pcosynchro/pcohoaremonitor.h"
 #include "pcosynchro/pcoconditionvariable.h"
@@ -83,6 +85,11 @@ public:
 
     [[nodiscard]] int getId() const {return id;}
     [[nodiscard]] double getResult() const {return result;}
+
+    bool operator<(const Result& other) const {
+            // Tri en fonction de l'attribut
+            return id < other.id;
+        }
 
 private:
     int id;
@@ -192,13 +199,12 @@ protected:
 
     std::map<ComputationType, std::forward_list<Request>> buffer;
     std::forward_list<Result> results;
-    int writePointer;
-    int readPointer;
+    static int expectedResult;
+    std::array<Condition,3> conditionsComputationType;
     int bufferSize;
-    Condition accessBuffer;
+    Condition accessBuffer, emptyResult, notExpectedResult;
     PcoMutex mutex;
     PcoSemaphore waitNotFull, waitNotEmpty;
-    static unsigned id;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
 
@@ -210,7 +216,7 @@ private:
      */
     inline void throwStopException() {throw StopException();}
 
-    int nextId = 0;
+    static int nextId;
 };
 
 #endif // COMPUTATIONMANAGER_H

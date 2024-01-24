@@ -1,0 +1,13 @@
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/CMakeFiles/edit_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/CMakeFiles/rebuild_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/src/CMakeFiles/labo6_lib.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/src/CMakeFiles/edit_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/src/CMakeFiles/rebuild_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_gui/CMakeFiles/PCO_lab06_gui.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_gui/CMakeFiles/edit_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_gui/CMakeFiles/rebuild_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_gui/CMakeFiles/PCO_lab06_gui_autogen.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_tests/CMakeFiles/PCO_lab06_tests.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_tests/CMakeFiles/edit_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_tests/CMakeFiles/rebuild_cache.dir
+/home/reds/pco/lab6/pco23_lab06/build-code-Desktop-Debug/labo6_tests/CMakeFiles/PCO_lab06_tests_autogen.dir

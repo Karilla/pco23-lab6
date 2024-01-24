@@ -12,12 +12,14 @@
 // afin de faire attendre les threads appelants et aussi afin que le code compile.
 
 #include "computationmanager.h"
-
+#include <iostream>
 
 ComputationManager::ComputationManager(int maxQueueSize): MAX_TOLERATED_QUEUE_SIZE(maxQueueSize)
 {
-    // TODO
 }
+
+int ComputationManager::nextId = 0;
+int ComputationManager::expectedResult = 0;
 
 int ComputationManager::requestComputation(Computation c) {
     monitorIn();
@@ -25,7 +27,8 @@ int ComputationManager::requestComputation(Computation c) {
         wait(accessBuffer);
     }
     bufferSize++;
-    Request req (c, id++);
+    unsigned int id = nextId;
+    Request req (c, nextId++);
     buffer[c.computationType].push_front(req);
     monitorOut();
     return id;
@@ -36,21 +39,26 @@ void ComputationManager::abortComputation(int id) {
 }
 
 Result ComputationManager::getNextResult() {
-    // TODO
-    // Replace all of the code below by your code
-
-    // Filled with some code in order to make the thread in the UI wait
     monitorIn();
+
+    while(results.empty() or results.front().getId() != expectedResult){
+        wait(emptyResult);
+        results.sort();
+    }
+
+    Result result = results.front();
+
+    results.pop_front();
 
     monitorOut();
 
-    return Result(-1, 0.0);
+    return result;
 }
 
 Request ComputationManager::getWork(ComputationType computationType) {
     monitorIn();
     if(buffer[computationType].empty()){
-        //TODO: On attend
+        wait(conditionsComputationType[(int)computationType]);
     }
     Request newReq = buffer[computationType].front();
     buffer[computationType].pop_front();
@@ -65,7 +73,10 @@ bool ComputationManager::continueWork(int id) {
 }
 
 void ComputationManager::provideResult(Result result) {
-    // TODO
+    monitorIn();
+    results.push_front(result);
+    signal(emptyResult);
+    monitorOut();
 }
 
 void ComputationManager::stop() {
