@@ -27,7 +27,8 @@ int ComputationManager::expectedResult = 0;
 int ComputationManager::requestComputation(Computation c) {
     monitorIn();
     // Si le buffer est plein, on attend
-    if(bufferSize >= MAX_TOLERATED_QUEUE_SIZE){
+    auto type = static_cast<size_t>(c.computationType);
+    if(buffer[c.computationType].size() >= MAX_TOLERATED_QUEUE_SIZE){
        if(stopped) {
           monitorOut();
           throwStopException();
@@ -39,7 +40,7 @@ int ComputationManager::requestComputation(Computation c) {
           throwStopException();
        }
     }
-    bufferSize++;
+    //bufferSizes[type]++;
     unsigned int id = nextId;
     Request req (c, nextId++);
     buffer[c.computationType].push_front(req);
@@ -57,13 +58,14 @@ void ComputationManager::abortComputation(int id) {
       auto it = std::find_if(list.second.begin(), list.second.end(),
                              [&](const auto& request){ return request.getId() == id;});
       // Si la requête est trouvée
+      auto type = static_cast<size_t>(list.first);
       if(it != list.second.end()){
-         auto prevIt = list.second.before_begin();
+         /*auto prevIt = list.second.before_begin();
          while (std::next(prevIt) != it) {
             ++prevIt;
-         }
-         list.second.erase_after(prevIt);
-         bufferSize--;
+         }*/
+         list.second.erase(it);
+         //bufferSizes[type]--;
          signal(bufferFull);
          monitorOut();
          return;
@@ -74,16 +76,16 @@ void ComputationManager::abortComputation(int id) {
    auto it = std::find_if(results.begin(), results.end(),
                           [&](const auto& pairIdResult){ return pairIdResult.first == id;});
    if(it != results.end()){
-      // Si c'est un résultat en cours de calcul, on signale pour débloquer le thred qui l'attend
-      if(it->second.has_value() and it->first == expectedResult){
+      // Si c'est un résultat en cours de calcul, on signale pour débloquer le thread qui l'attend
+      if(!it->second.has_value() and it->first == expectedResult){
          expectedResult++;
          signal(emptyResult);
       }
-      auto prevIt = results.before_begin();
+      /*auto prevIt = results.before_begin();
       while (std::next(prevIt) != it) {
          ++prevIt;
-      }
-      results.erase_after(prevIt);
+      }*/
+      results.erase(it);
       monitorOut();
       return;
    }
@@ -94,9 +96,9 @@ void ComputationManager::abortComputation(int id) {
 //résultats de calculs qui ont été annulés. Elle est potentiellement bloquante.
 Result ComputationManager::getNextResult() {
     monitorIn();
-
+   results.sort();
     // Si il n'y a pas de résultat ou que le résultat n'est pas celui attendu, on attend
-    while(results.empty() or results.front().first != expectedResult){
+    while(results.empty() or results.front().first != expectedResult or !results.front().second.has_value()){
          if(stopped) {
              monitorOut();
              throwStopException();
@@ -135,13 +137,12 @@ Request ComputationManager::getWork(ComputationType computationType) {
             throwStopException();
          }
     }
-    Request newReq = buffer[computationType].front();
-    buffer[computationType].pop_front();
-    bufferSize--;
+    Request newReq = buffer[computationType].back();
+    buffer[computationType].pop_back();
+    //bufferSizes[static_cast<size_t>(computationType)]--;
     signal(bufferFull);
     results.emplace_front(newReq.getId(),std::nullopt);
     monitorOut();
-
     return newReq;
 }
 
@@ -150,11 +151,17 @@ Request ComputationManager::getWork(ComputationType computationType) {
 bool ComputationManager::continueWork(int id) {
     monitorIn();
     if(stopped){
+       std::cout << "Stopped" << std::endl;
        monitorOut();
        return false;
     }
+
+    // Si le résultat n'est plus dans results
+      auto it = std::find_if(results.begin(), results.end(),
+                              [&](const auto& pairIdResult){ return pairIdResult.first == id;});
+
     monitorOut();
-    return true;
+    return !(it == results.end());
 }
 
 // Cette méthode permet au calculateur de retourner le résultat du calcul.

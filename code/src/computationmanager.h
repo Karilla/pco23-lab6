@@ -22,6 +22,7 @@
 #include <vector>
 #include <queue>
 #include <optional>
+#include <list>
 
 #include "pcosynchro/pcohoaremonitor.h"
 #include "pcosynchro/pcoconditionvariable.h"
@@ -199,11 +200,12 @@ protected:
     // Ajoutez vos attributs et déclarations de méthodes ici
     // P.ex. variables conditions et structure de données pour le buffer
 
-    std::map<ComputationType, std::forward_list<Request>> buffer;
-    std::forward_list<std::pair<int, std::optional<Result>>> results;
+    std::map<ComputationType, std::list<Request>> buffer;
+    std::list<std::pair<int, std::optional<Result>>> results;
+    std::array<size_t, 3> bufferSizes;
     static int expectedResult;
     std::array<Condition,3> computationTypeEmpty;
-    int bufferSize;
+    //int bufferSize;
     Condition bufferFull, emptyResult, notExpectedResult;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
