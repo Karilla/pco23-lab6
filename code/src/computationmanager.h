@@ -186,7 +186,7 @@ public:
     // Documentation above
     Request getWork(ComputationType computationType) override;
     bool continueWork(int id) override;
-    void provideResult(Result result) override;
+    void provideResult(Result resultChecked) override;
 
 
     // Control Interface

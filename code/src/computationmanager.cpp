@@ -40,11 +40,11 @@ int ComputationManager::requestComputation(Computation c) {
           throwStopException();
        }
     }
-    //bufferSizes[type]++;
-    unsigned int id = nextId;
+    int id = nextId;
     Request req (c, nextId++);
     buffer[c.computationType].push_front(req);
-    signal(computationTypeEmpty[(int)c.computationType]);
+    results.emplace_front(req.getId(), std::nullopt);
+    signal(computationTypeEmpty[type]);
     monitorOut();
     return id;
 }
@@ -60,12 +60,7 @@ void ComputationManager::abortComputation(int id) {
       // Si la requête est trouvée
       auto type = static_cast<size_t>(list.first);
       if(it != list.second.end()){
-         /*auto prevIt = list.second.before_begin();
-         while (std::next(prevIt) != it) {
-            ++prevIt;
-         }*/
          list.second.erase(it);
-         //bufferSizes[type]--;
          signal(bufferFull);
          monitorOut();
          return;
@@ -81,10 +76,6 @@ void ComputationManager::abortComputation(int id) {
          expectedResult++;
          signal(emptyResult);
       }
-      /*auto prevIt = results.before_begin();
-      while (std::next(prevIt) != it) {
-         ++prevIt;
-      }*/
       results.erase(it);
       monitorOut();
       return;
@@ -96,9 +87,9 @@ void ComputationManager::abortComputation(int id) {
 //résultats de calculs qui ont été annulés. Elle est potentiellement bloquante.
 Result ComputationManager::getNextResult() {
     monitorIn();
-   results.sort();
+   //results.sort();
     // Si il n'y a pas de résultat ou que le résultat n'est pas celui attendu, on attend
-    while(results.empty() or results.front().first != expectedResult or !results.front().second.has_value()){
+    while(results.empty() /*or results.back().first != expectedResult*/ or !results.back().second.has_value()){
          if(stopped) {
              monitorOut();
              throwStopException();
@@ -109,12 +100,13 @@ Result ComputationManager::getNextResult() {
              monitorOut();
              throwStopException();
          }
-        results.sort();
+        //results.sort();
     }
 
-    Result result = results.front().second.value();
-    results.pop_front();
+    Result result = results.back().second.value();
+    results.pop_back();
     expectedResult++;
+    //std::cout << "Result " << result.getId() << " : " << expectedResult << std::endl;
     monitorOut();
 
     return result;
@@ -139,9 +131,8 @@ Request ComputationManager::getWork(ComputationType computationType) {
     }
     Request newReq = buffer[computationType].back();
     buffer[computationType].pop_back();
-    //bufferSizes[static_cast<size_t>(computationType)]--;
     signal(bufferFull);
-    results.emplace_front(newReq.getId(),std::nullopt);
+    //results.emplace_front(newReq.getId(), std::nullopt);
     monitorOut();
     return newReq;
 }
@@ -168,7 +159,8 @@ bool ComputationManager::continueWork(int id) {
 void ComputationManager::provideResult(Result result) {
     monitorIn();
     auto it = std::find_if(results.begin(), results.end(),
-                           [&](const auto& pairIdResult){ return pairIdResult.first == result.getId();});
+                           [&](const auto& resultChecked){ return resultChecked.first == result.getId();});
+    //std::cout << "provideResult: Result " << result.getId() << ", result found " << it->first<< std::endl;
     if(it == results.end()){
        monitorOut();
        return;
@@ -187,7 +179,7 @@ void ComputationManager::stop() {
    // On signale sur toutes les conditions existantes
    signal(bufferFull);
    signal(emptyResult);
-   signal(notExpectedResult);
+   //signal(notExpectedResult);
    for (auto &condition: computationTypeEmpty) {
       signal(condition);
    }
