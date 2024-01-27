@@ -1,15 +1,12 @@
-//     ____  __________     ___   ____ ___  _____ //
-//    / __ \/ ____/ __ \   |__ \ / __ \__ \|__  / //
-//   / /_/ / /   / / / /   __/ // / / /_/ / /_ <  //
-//  / ____/ /___/ /_/ /   / __// /_/ / __/___/ /  //
-// /_/    \____/\____/   /____/\____/____/____/   //
-// Auteurs : Prénom Nom, Prénom Nom
+/**
+\file computationmanager.h
+\author Eva Ray, Benoit Delay
+\date 27.01.2024
 
-// La déclaration de la classe ComputationManager se trouve en bas du fichier,
-// ajoutez-y les attributs (et fonctions au besoin) pour votre implémentation.
-//
-// Ci-dessous se trouvent aussi les déclarations de divers classes et interfaces
-// utilisées avec le buffer ComputationManager.
+Ce fichier contient la définition de plusieurs classes permettant l’exécution concurrente et différée de calculs.
+En particulier, il contient la définition de la classe ComputationManager qui est un buffer partagé entre des clients
+et des moteurs de calculs et qui est implémentée sous la forme d'un moniteur de Hoare.
+*/
 
 #ifndef COMPUTATIONMANAGER_H
 #define COMPUTATIONMANAGER_H
@@ -203,10 +200,8 @@ protected:
     std::map<ComputationType, std::list<Request>> buffer;
     std::list<std::pair<int, std::optional<Result>>> results;
     std::array<size_t, 3> bufferSizes;
-    static int expectedResult;
     std::array<Condition,3> computationTypeEmpty;
-    //int bufferSize;
-    Condition bufferFull, emptyResult, notExpectedResult;
+    Condition bufferFull, notExpectedResult;
     // Queues
     const size_t MAX_TOLERATED_QUEUE_SIZE;
 
