@@ -16,6 +16,7 @@
 \section{Etape 1}
 Dans cette étape, nous avons mis en place la distribution des calculs grâce aux méthodes \texttt{requestComputation} et
 \texttt{getWork}.
+
 \subsection{Choix d'implémentation}
 Pour représenter le buffer contenant les calculs à réaliser, nous avons choisi d'utiliser une map ayant comme clé le
 type du calcul et comme valeur une \texttt{std::list} contenant les calculs sous forme de \texttt{Request} à réaliser de
@@ -33,7 +34,6 @@ La méthode \texttt{requestComputation} est aussi en charge de donner un indice 
 nous avons utilisé un attribut statique \texttt{nextId} qui est incrémenté à chaque fois qu'un calcul est ajouté au
 buffer.
 
-
 La méthode \texttt{getWork}, quant à elle, demande du travail d'un certain type. Pour cela, elle vérifie que la liste
 correspondante dans la map n'est pas vide. Si c'est le cas, elle appelle la méthode \texttt{pop\_back} sur la liste
 afin de récupérer le dernier élément de la liste, qui sera donc le plus ancien. Si la liste est vide, elle appelle la
@@ -42,16 +42,17 @@ contenant une \texttt{Condition} pour chaque type de calcul qui représente le f
 type dans le buffer. Dans ce cas, on attented donc qu'un calcul de ce type soit ajouté au buffer avant de pouvoir
 continuer.
 
-
 Lorsqu'un calcul est ajouté au buffer dans la méthode \texttt{requestComputation}, on signale sur la condition correspondante
 dans \texttt{emptyQueuePerType} que le buffer contient maintenant un calcul de ce type. De même, lorsqu'un calcul est
 retiré du buffer dans la méthode \texttt{getWork}, on signale sur la condition correspondante dans \texttt{fullQueuePerType}
 que le buffer contient maintenant un calcul de ce type en moins.
+
 \subsection{Tests}
 
 \section{Etape 2}
 Dans cette étape nous avons mis en place la gestion des résultats grâce aux méthodes \texttt{getNextResult} et
 \texttt{provideResult}.
+
 \subsection{Choix d'implémentation}
 Pour représenter la structure contenant les résultats, nous avons choisi d'utiliser une \texttt{std::list} contenant les
 résultats sous forme de \texttt{ResultWithId}. \texttt{ResultWithId} est une structure que nous avons rajoutée
@@ -78,6 +79,7 @@ donné. Ensuite, elle signale sur la condition \texttt{notExpectedResult} que le
 \section{Etape 3}
 Dans cette étape, nous avons mis en place la possibilité d’annuler des calculs demandés par le client grâce aux méthodes
 \texttt{abortComputation} et \texttt{continueWork}.
+
 \subsection{Choix d'implémentation}
 La méthode \texttt{abortComputation} permet d’annuler un calcul en cours grâce à son identifiant. Il y a plusieurs
 cas à gérer. Si le calcul n’est pas encore en cours, il faut simplement le retirer de la map \texttt{buffer}. Dans
@@ -96,8 +98,26 @@ signifie que le calcul doit être annulé.
 \subsection{Tests}
 
 \section{Etape 4}
+Dans cette étape, nous avons mis en place la gestion de la terminaison du buffer grâce aux méthodes \texttt{stop}
+et \texttt{throwStopException}.
 
 \subsection{Choix d'implémentation}
+La méthode \texttt{stop} permet de demander l'arrêt du buffer.  Afin de modéliser
+le fait que le buffer est arrêté, nous avons créé un attribut booléen \texttt{stopped} qui est innitialisé à \texttt{false}
+au lancement du programme. Lorsque la méthode \texttt{stop} est appelée, on met cet attribut à \texttt{true}. De plus,
+on signale sur toutes les conditions existantes dans le buffer afin de débloquer tous les threads qui attendent sur
+ces dernières, afin qu'ils puissent s'arrêter.
+
+Pour que l'arrête des threads se fasse comme attendu, nous avons dû apporter quelques modifications aux méthodes
+préalablement définies. Ainsi, dans toutes les fonctions qui contiennent une attente sur une condition, nous avons
+ajouté une vérification de l'attribut \texttt{stopped} avant et après l'attente sur la condition. Si on se trouve
+avant l'attente et que l'attribut \texttt{stopped} est à \texttt{true}, on sort du moniteur et on lance
+une exception. Si on se trouve après l'attente et que l'attribut \texttt{stopped} est à \texttt{true}, on signale sur
+la condition pour débloquer les threads qui attendent dessus, on sort du moniteur et on lance une exception. Cela
+permet en quelque sorte de réveiller les threads en cascade pour être sûr qu'ils s'arrêtent tous.
+
+La méthode \texttt{continueWork} a aussi été modifiée afin de retourner \texttt{false} si l'attribut \texttt{stopped} est
+à \texttt{true}, afin de signifier que le travail en cours doit s'arrêter.
 
 \subsection{Tests}
 
