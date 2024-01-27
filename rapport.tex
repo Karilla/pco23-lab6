@@ -18,7 +18,9 @@ Dans cette étape, nous avons mis en place la distribution des calculs grâce au
 \texttt{getWork}.
 \subsection{Choix d'implémentation}
 Pour représenter le buffer contenant les calculs à réaliser, nous avons choisi d'utiliser une map ayant comme clé le
-type du calcul et comme valeur une \texttt{std::list} contenant les \texttt{Computation} à réaliser de ce type. Notre
+type du calcul et comme valeur une \texttt{std::list} contenant les calculs sous forme de \texttt{Request} à réaliser de
+ce type.
+Notre
 technique consiste simplement à ajouter les calculs au début de la liste correspondante dans la map dès que
 \texttt{requestComputation} est appelée.
 Cependant, chaque liste a une taille maximale définie par la constante \texttt{MAX\_TOLERATED\_QUEUE\_SIZE}. Pour
@@ -48,15 +50,55 @@ que le buffer contient maintenant un calcul de ce type en moins.
 \subsection{Tests}
 
 \section{Etape 2}
+Dans cette étape nous avons mis en place la gestion des résultats grâce aux méthodes \texttt{getNextResult} et
+\texttt{provideResult}.
 \subsection{Choix d'implémentation}
+Pour représenter la structure contenant les résultats, nous avons choisi d'utiliser une \texttt{std::list} contenant les
+résultats sous forme de \texttt{ResultWithId}. \texttt{ResultWithId} est une structure que nous avons rajoutée
+contenant un id et un résultat qui est optionel (grâce à \texttt{std::optional}). Ainis, nous pouvons ajouter le
+résultat dans la liste directement après avoir envoyé la requête au calculateur, même lorsque le résultat est encore
+en cours de calcul, ce qui nous permet de connaître l'ordre des calculs en cours ou terminé à tout moment. Dans les
+faits, un résultat est ajouté à la liste dès que \texttt{requestComputation} est appelée.
+
+La méthode \texttt{getNextResult} est en charge de récupérer le résultat le plus ancien dans la liste. Pour cela, elle
+n'as donc qu'à accéder au dernier élément contenu dans la liste. Si la partie optionelle du résultat est vide, cela
+signifie que le résultat n'est pas encore disponible et donc que le calcul est toujours en cours. Dans ce cas, on
+appelle la méthode \texttt{wait} sur la condition \texttt{notExpectedResult}. Cette dernière est une condition qui
+représente le fait que le prochain résultat n'est pas encore disponible. On attend donc que le résultats attendu
+soit disponible dans la liste avant de pouvoir continuer. Lorsque c'est le cas, on retire le résultat de la liste et
+on le retourne.
+
+La méthode \texttt{provideResult} permet au calculateur de retourner le résultat du calcul. Pour cela, elle cherche
+l'id du résultat donné dans la liste \texttt{results} et met à jour la partie optionelle du résultat avec le résultat
+donné. Ensuite, elle signale sur la condition \texttt{notExpectedResult} que le prochain résultat est disponible.
+
+
 \subsection{Tests}
 
 \section{Etape 3}
+Dans cette étape, nous avons mis en place la possibilité d’annuler des calculs demandés par le client grâce aux méthodes
+\texttt{abortComputation} et \texttt{continueWork}.
 \subsection{Choix d'implémentation}
+La méthode \texttt{abortComputation} permet d’annuler un calcul en cours grâce à son identifiant. Il y a plusieurs
+cas à gérer. Si le calcul n’est pas encore en cours, il faut simplement le retirer de la map \texttt{buffer}. Dans
+ce cas, il faut signaler sur la condition \texttt{fullQueuePerType} que la queue pour ce type de calcul contient un
+calcul en moins. Si le calcul est en cours, il faut le retirer de la liste \texttt{results} et signaler sur
+la condition \texttt{notExpectedResult} pour potentiellement débloqué un thread qui attend sur ce résultat.
+Si le calcul est terminé, il faut simplement le retirer de la liste \texttt{results}.
+On notera qu'au vu de notre implémentation de \texttt{requestComputation}, qui ajoute directement un calcul demandé
+dans la liste \texttt{results}, il faut aussi retirer le calcul de cette liste s'il est demandé mais pas encore en
+cours.
+
+La méthode \texttt{continueWork} et quant à elle assez simple, puisqu'elle va simplement chercher l'id passé en
+paramètre dans la liste \texttt{results}. Si l'id est présent, cela signifie que le calcul doit continuer, sinon, cela
+signifie que le calcul doit être annulé.
+
 \subsection{Tests}
 
 \section{Etape 4}
+
 \subsection{Choix d'implémentation}
+
 \subsection{Tests}
 
 \end{document}
