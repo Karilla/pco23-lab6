@@ -48,6 +48,22 @@ retiré du buffer dans la méthode \texttt{getWork}, on signale sur la condition
 que le buffer contient maintenant un calcul de ce type en moins.
 
 \subsection{Tests}
+L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
+calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
+que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
+
+\begin{itemize}
+    \item Les Google tests globaux et ceux concernant l'étape 1 passent tous.
+    \item Si on envoie une demande de calcul de type \texttt{A}, une calculateur de type \texttt{A} prend le calcul.
+    C'est le comportement attendu.
+    \item Si on envoie 3 demandes de calcul de type \texttt{A}, les 2 calculateurs de type \texttt{A} prennent 2
+    calculs, le troisième est en attente jusqu'à ce qu'un calculateur de type \texttt{A} ait fini son calcul, celui
+    -ci s'occupe alors du troisième calcul. C'est le comportement attendu.
+    \item Si on envoie une demande de calcul de type \texttt{A}, une demande de calcul de type \texttt{B} et une
+    demande de calcul de type \texttt{C}, 3 calculateurs du bon type prennent chacun un calcul. C'est le comportement attendu.
+    \item Lorsqu'on envoie des demandes de calculs, un id leur est attributl dans leur ordre d'arrivée en partant de
+    0. Ceci peut être vérifié en regardant les logs. C'est le comportement attendu.
+\end{itemize}
 
 \section{Etape 2}
 Dans cette étape nous avons mis en place la gestion des résultats grâce aux méthodes \texttt{getNextResult} et
@@ -76,6 +92,43 @@ donné. Ensuite, elle signale sur la condition \texttt{notExpectedResult} que le
 
 \subsection{Tests}
 
+\begin{itemize}
+    \item Les Google tests concernant l'étape 2 passent tous.
+    \item Si on envoie une demande de calcul de type \texttt{A}, une calculateur de type \texttt{A} prend le calcul
+    puis renvoie le résultat lorsqu'il est calculé. C'est le comportement attendu.
+    \item Si on envoie 3 demandes de calcul de type \texttt{B}, le calculateur de type \texttt{B} s'occupe des calculs
+    dans l'ordre d'arrivée puis renvoie le résultat à chaque fois qu'il est calculé. C'est le comportement attendu. (
+    Voir figure 1.a.)
+    \item Si on envoie à la suite un calcul de type \texttt{A}, un calcul de type \texttt{B} et un calcul de type
+    \texttt{C}, les résultats sont renvoyés dans l'ordre A, B, C, bien que le calcul de type \texttt{C} se soit terminé
+    avant le calcul de type \texttt{B}, qui s'est terminé avant le calcul de type \texttt{A}. C'est le comportement
+    attendu. (Voir figure 1.b.)
+    \item Si on envoie à la suite un calcul de type \texttt{A} et 4 calculs de type \texttt{C}, les calculs de type \texttt{C}
+    se terminent avant le calcul de type \texttt{A} mais le résultat du calcul de type \texttt{A} est renvoyé avant.
+    C'est le comportement attendu. (Voir figure 1.c.)
+\end{itemize}
+
+\begin{figure}[h]
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/B_B_B}
+        \caption{Suite de calculs: B, B, B}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/A_B_C}
+        \caption{Suite de calculs: A, B, C}
+    \end{subfigure}
+
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/A_C_C_C_C}
+        \caption{Suite de calculs: A, C, C, C, C}
+    \end{subfigure}
+    \caption{Exemple d'exécution pour l'étape 2}
+    \label{fig:full2}
+\end{figure}
+
 \section{Etape 3}
 Dans cette étape, nous avons mis en place la possibilité d’annuler des calculs demandés par le client grâce aux méthodes
 \texttt{abortComputation} et \texttt{continueWork}.
@@ -96,6 +149,47 @@ paramètre dans la liste \texttt{results}. Si l'id est présent, cela signifie q
 signifie que le calcul doit être annulé.
 
 \subsection{Tests}
+\begin{itemize}
+    \item Les Google tests concernant l'étape 3 passent tous.
+    \item Si on envoie une demande de calcul de type \texttt{A} et qu'on l'annule avant la fin, le calculateur s'arr
+    ête et le résultat n'est pas renvoyé. C'est le comportement attendu. (Voir figure 2.a.)
+    \item Si on envoie une demande de calcul de type \texttt{A} et qu'on l'annule après la fin alors que le résultat
+    est déjà renvoyé, cela n'a pas de conséquence et on peut relancer un nouveau calcul. C'est le comportement attendu.
+    \item Si on envoie des demandes de calcul de type \texttt{A} et \texttt{B} et qu'on annule le calcul de type \texttt{B}
+    alors qu'il est déjà calculé mais avant la fin du calcul de type \texttt{A}, seul le calculateur de type \texttt{A}
+    renvoie son résultat. C'est le comportement attendu. (Voir figure 2.b.)
+    \item Si on envoie des demandes de calcul de type \texttt{A}, \texttt{B} et \texttt{C} et qu'on annule les
+    calculs de type \texttt{B} et \texttt{C} alors qu'ils sont déjà calculés mais avant la fin du calcul de type \texttt{A},
+    seul le calculateur de type \texttt{A} renvoie son résultat. C'est le comportement attendu. (Voir figure 2.c.)
+    \item Lorsqu'on a annulé un calcul, on peut relancer un nouveau calcul sans problème. C'est le comportement
+    attendu. (Voir figure 2.d.)
+\end{itemize}
+
+\begin{figure}[h]
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/A_Abort}
+        \caption{Suite de calculs: A abort}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/A_B_Abort}
+        \caption{Suite de calculs: A, B abort}
+    \end{subfigure}
+
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/A_B_Abort_C_Abort}
+        \caption{Suite de calculs: A, B abort, C abort}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/B_Abort_B_C}
+        \caption{Suite de calculs: B abort, B, C}
+    \end{subfigure}
+    \caption{Exemple d'exécution pour l'étape 3}
+    \label{fig:full3}
+\end{figure}
 
 \section{Etape 4}
 Dans cette étape, nous avons mis en place la gestion de la terminaison du buffer grâce aux méthodes \texttt{stop}
