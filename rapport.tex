@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[margin = 2cm]{geometry}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\title{PCO Laboratoire 6 \\
+\large Producteur-Consommateur pour calcul différé (Hoare)}
+\author{Benoît Delay, Eva Ray}
+
+\setlength{\parskip}{1em}
+
+\begin{document}
+\maketitle
+
+\section{Etape 1}
+Dans cette étape, nous avons mis en place la distribution des calculs grâce aux méthodes \texttt{requestComputation} et
+\texttt{getWork}.
+\subsection{Choix d'implémentation}
+Pour représenter le buffer contenant les calculs à réaliser, nous avons choisi d'utiliser une map ayant comme clé le
+type du calcul et comme valeur une \texttt{std::list} contenant les \texttt{Computation} à réaliser de ce type. Notre
+technique consiste simplement à ajouter les calculs au début de la liste correspondante dans la map dès que
+\texttt{requestComputation} est appelée.
+Cependant, chaque liste a une taille maximale définie par la constante \texttt{MAX\_TOLERATED\_QUEUE\_SIZE}. Pour
+modéliser cette contrainte, nous avons créé un tableau nommé \texttt{fullQueuePerType} contenant une \texttt{Condition}
+pour chaque type de calcul.
+Avant d'ajouter le calcul à la liste, on vérifie donc que la taille de la liste est inférieure à \texttt{MAX\_TOLERATED\_QUEUE\_SIZE}.
+Si ce n'est pas les cas, on appelle la fonction \texttt{wait} sur la condition correspondante dans \texttt{fullQueuePerType
+} et on attend qu'un calcul du bon type arrive dans le buffer.
+La méthode \texttt{requestComputation} est aussi en charge de donner un indice unique à chaque calcul. Pour cela,
+nous avons utilisé un attribut statique \texttt{nextId} qui est incrémenté à chaque fois qu'un calcul est ajouté au
+buffer.
+
+
+La méthode \texttt{getWork}, quant à elle, demande du travail d'un certain type. Pour cela, elle vérifie que la liste
+correspondante dans la map n'est pas vide. Si c'est le cas, elle appelle la méthode \texttt{pop\_back} sur la liste
+afin de récupérer le dernier élément de la liste, qui sera donc le plus ancien. Si la liste est vide, elle appelle la
+méthode \texttt{wait} sur la condition correspondante dans \texttt{emptyQueuePerType} qui est un autre tableau
+contenant une \texttt{Condition} pour chaque type de calcul qui représente le fait qu'il n'y a pas de calcul de ce
+type dans le buffer. Dans ce cas, on attented donc qu'un calcul de ce type soit ajouté au buffer avant de pouvoir
+continuer.
+
+
+Lorsqu'un calcul est ajouté au buffer dans la méthode \texttt{requestComputation}, on signale sur la condition correspondante
+dans \texttt{emptyQueuePerType} que le buffer contient maintenant un calcul de ce type. De même, lorsqu'un calcul est
+retiré du buffer dans la méthode \texttt{getWork}, on signale sur la condition correspondante dans \texttt{fullQueuePerType}
+que le buffer contient maintenant un calcul de ce type en moins.
+\subsection{Tests}
+
+\section{Etape 2}
+\subsection{Choix d'implémentation}
+\subsection{Tests}
+
+\section{Etape 3}
+\subsection{Choix d'implémentation}
+\subsection{Tests}
+
+\section{Etape 4}
+\subsection{Choix d'implémentation}
+\subsection{Tests}
+
+\end{document}
