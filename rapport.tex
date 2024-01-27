@@ -63,6 +63,9 @@ que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs
     -ci s'occupe alors du troisième calcul. C'est le comportement attendu.
     \item Si on envoie une demande de calcul de type \texttt{A}, une demande de calcul de type \texttt{B} et une
     demande de calcul de type \texttt{C}, 3 calculateurs du bon type prennent chacun un calcul. C'est le comportement attendu.
+    \item Si on envoie une demande de calcul de type \texttt{A} alors que la queue du type \texttt{A} est pleine, il
+    faut attendre qu'une place se libère dans la queue pour pouvoir ajouter le calcul et que celui-ci ait un
+    identifiant. C'est le comportement attendu.
     \item Lorsqu'on envoie des demandes de calculs, un id leur est attribué dans leur ordre d'arrivée en partant de
     0. Ceci peut être vérifié en regardant les logs. C'est le comportement attendu.
 \end{itemize}
