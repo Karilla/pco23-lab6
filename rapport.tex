@@ -52,6 +52,8 @@ L'environnement de test comporte 3 types de calculs différents, 2 calculateurs 
 calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
 que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
 
+\pagebreak
+
 \begin{itemize}
     \item Les Google tests globaux et ceux concernant l'étape 1 passent tous.
     \item Si on envoie une demande de calcul de type \texttt{A}, une calculateur de type \texttt{A} prend le calcul.
@@ -61,7 +63,7 @@ que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs
     -ci s'occupe alors du troisième calcul. C'est le comportement attendu.
     \item Si on envoie une demande de calcul de type \texttt{A}, une demande de calcul de type \texttt{B} et une
     demande de calcul de type \texttt{C}, 3 calculateurs du bon type prennent chacun un calcul. C'est le comportement attendu.
-    \item Lorsqu'on envoie des demandes de calculs, un id leur est attributl dans leur ordre d'arrivée en partant de
+    \item Lorsqu'on envoie des demandes de calculs, un id leur est attribué dans leur ordre d'arrivée en partant de
     0. Ceci peut être vérifié en regardant les logs. C'est le comportement attendu.
 \end{itemize}
 
@@ -91,6 +93,9 @@ donné. Ensuite, elle signale sur la condition \texttt{notExpectedResult} que le
 
 
 \subsection{Tests}
+L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
+calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
+que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
 
 \begin{itemize}
     \item Les Google tests concernant l'étape 2 passent tous.
@@ -111,15 +116,20 @@ donné. Ensuite, elle signale sur la condition \texttt{notExpectedResult} que le
 \begin{figure}[h]
     \begin{subfigure}{0.45\textwidth}
         \centering
+        \includegraphics[width=0.8\textwidth]{figures/A}
+        \caption{Suite de calculs: A}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
         \includegraphics[width=0.8\textwidth]{figures/B_B_B}
         \caption{Suite de calculs: B, B, B}
     \end{subfigure}
+
     \begin{subfigure}{0.45\textwidth}
         \centering
         \includegraphics[width=0.8\textwidth]{figures/A_B_C}
         \caption{Suite de calculs: A, B, C}
     \end{subfigure}
-
     \begin{subfigure}{0.45\textwidth}
         \centering
         \includegraphics[width=0.8\textwidth]{figures/A_C_C_C_C}
@@ -149,6 +159,9 @@ paramètre dans la liste \texttt{results}. Si l'id est présent, cela signifie q
 signifie que le calcul doit être annulé.
 
 \subsection{Tests}
+L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
+calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
+que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
 \begin{itemize}
     \item Les Google tests concernant l'étape 3 passent tous.
     \item Si on envoie une demande de calcul de type \texttt{A} et qu'on l'annule avant la fin, le calculateur s'arr
@@ -191,6 +204,8 @@ signifie que le calcul doit être annulé.
     \label{fig:full3}
 \end{figure}
 
+\pagebreak
+
 \section{Etape 4}
 Dans cette étape, nous avons mis en place la gestion de la terminaison du buffer grâce aux méthodes \texttt{stop}
 et \texttt{throwStopException}.
@@ -214,5 +229,20 @@ La méthode \texttt{continueWork} a aussi été modifiée afin de retourner \tex
 à \texttt{true}, afin de signifier que le travail en cours doit s'arrêter.
 
 \subsection{Tests}
+L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
+calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
+que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
+\begin{itemize}
+    \item Les Google tests concernant l'étape 4 passent tous.
+    \item Les méthodes \texttt{requestComputation}, \texttt{getWork} et \texttt{getNextResult} lancent un exception si
+    le buffer est arrêté si elles allaient entrer ou sortent d'une phase d'attente. C'est le comportement attendu.
+    \item Lorsqu'on arrête le buffer, les threads qui attendent sur une condition sont débloqués et s'arrêtent. C'est
+    le comportement attendu.
+    \item Lorsqu'on arrête le buffer, tous les threads s'arrêtent (i.e on arrive à \texttt{join} sur tous les threads).
+    C'est le comportement attendu.
+    \item Lorsqu'on arrête le buffer, on ne peut plus ajouter/ récupérer de calculs. C'est le comportement attendu.
+    \item Lorqu'on arrête le buffer, les derniers calculs sont récupérés dans l'ordre de leur demande et ne sont pas
+    mélangés. C'est le comportement attendu.
+\end{itemize}
 
 \end{document}
