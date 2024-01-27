@@ -11,8 +11,6 @@ et des moteurs de calculs et qui est implémentée sous la forme d'un moniteur d
 #ifndef COMPUTATIONMANAGER_H
 #define COMPUTATIONMANAGER_H
 
-// Ajoutez les includes dont vous avez besoin ici
-
 #include <memory>
 #include <forward_list>
 #include <map>
@@ -192,7 +190,6 @@ public:
    ComputationManager(int maxQueueSize = 10);
 
    // Client Interface
-   // Documentation above
    int requestComputation(Computation c) override;
 
    void abortComputation(int resultWithId) override;
@@ -200,7 +197,6 @@ public:
    Result getNextResult() override;
 
    // Compute Engine Interface
-   // Documentation above
    Request getWork(ComputationType computationType) override;
 
    bool continueWork(int id) override;

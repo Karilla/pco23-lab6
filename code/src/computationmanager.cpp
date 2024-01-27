@@ -9,7 +9,6 @@ et est implémentée sous la forme d'un moniteur de Hoare.
 */
 
 #include "computationmanager.h"
-#include <iostream>
 #include <algorithm>
 
 ComputationManager::ComputationManager(int maxQueueSize) : MAX_TOLERATED_QUEUE_SIZE(maxQueueSize), stopped(false) {
