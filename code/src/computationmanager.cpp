@@ -12,7 +12,7 @@ et est implémentée sous la forme d'un moniteur de Hoare.
 #include <iostream>
 #include <algorithm>
 
-ComputationManager::ComputationManager(int maxQueueSize) : MAX_TOLERATED_QUEUE_SIZE(maxQueueSize) {
+ComputationManager::ComputationManager(int maxQueueSize) : MAX_TOLERATED_QUEUE_SIZE(maxQueueSize), stopped(false) {
 }
 
 int ComputationManager::nextId = 0;
@@ -20,17 +20,17 @@ int ComputationManager::nextId = 0;
 // Cette méthode permet de demander d’effectuer un calcul et retourne un identifiant (id), donné
 // par le buffer, correspondant au calcul.
 int ComputationManager::requestComputation(Computation c) {
-   monitorIn();
-   // Si le buffer est plein, on attend
    auto type = static_cast<size_t>(c.computationType);
+   monitorIn();
+   // If the queue is full for computationType, we wait
    if (buffer[c.computationType].size() >= MAX_TOLERATED_QUEUE_SIZE) {
       if (stopped) {
          monitorOut();
          throwStopException();
       }
-      wait(bufferFull);
+      wait(fullQueuePerType[type]);
       if (stopped) {
-         signal(bufferFull);
+         signal(fullQueuePerType[type]);
          monitorOut();
          throwStopException();
       }
@@ -39,7 +39,7 @@ int ComputationManager::requestComputation(Computation c) {
    Request req(c, nextId++);
    buffer[c.computationType].push_front(req);
    results.emplace_front(req.getId(), std::nullopt);
-   signal(computationTypeEmpty[type]);
+   signal(emptyQueuePerType[type]);
    monitorOut();
    return id;
 }
@@ -48,27 +48,26 @@ int ComputationManager::requestComputation(Computation c) {
 void ComputationManager::abortComputation(int id) {
 
    monitorIn();
-   // On cherche la requête dans le buffer et on la supprime si on la trouve
+   // We look for the request in the buffer containing the pending computations and delete it if we find it
    for (auto &list: buffer) {
       auto it = std::find_if(list.second.begin(), list.second.end(),
                              [&](const auto &request) { return request.getId() == id; });
-      // Si la requête est trouvée
       auto type = static_cast<size_t>(list.first);
+      // If the request is found, we delete it
       if (it != list.second.end()) {
          list.second.erase(it);
-         signal(bufferFull);
+         signal(fullQueuePerType[type]);
          monitorOut();
          return;
       }
    }
 
-   // On cherche si la requête est dans les résultats (i.e. en cours de calcul ou calculée)
+   // We check if the request is in the results (i.e. being computed or computed)
    auto it = std::find_if(results.begin(), results.end(),
-                          [&](const auto &pairIdResult) { return pairIdResult.first == id; });
+                          [&](const auto &resultWithId) { return resultWithId.id == id; });
    if (it != results.end()) {
-      // Si c'est un résultat en cours de calcul, on signale pour débloquer le thread qui l'attend potentiellement
-      if (!it->second.has_value()) {
-         //expectedResult++;
+      // If it is a result being computed, we signal to unblock the thread that is potentially waiting for it
+      if (!it->result.has_value()) {
          signal(notExpectedResult);
       }
       results.erase(it);
@@ -82,9 +81,8 @@ void ComputationManager::abortComputation(int id) {
 //résultats de calculs qui ont été annulés. Elle est potentiellement bloquante.
 Result ComputationManager::getNextResult() {
    monitorIn();
-   //results.sort();
-   // Si il n'y a pas de résultat ou que le résultat n'est pas celui attendu, on attend
-   while (results.empty() or !results.back().second.has_value()) {
+   // If there isn't any result or the result is not the one we are waiting for, we wait
+   while (results.empty() or !results.back().result.has_value()) {
       if (stopped) {
          monitorOut();
          throwStopException();
@@ -97,35 +95,33 @@ Result ComputationManager::getNextResult() {
       }
    }
 
-   Result result = results.back().second.value();
+   Result result = results.back().result.value();
    results.pop_back();
-   //expectedResult++;
-   //std::cout << "Result " << result.getId() << " : " << expectedResult << std::endl;
    monitorOut();
-
    return result;
 }
 
 // Cette méthode permet au calculateur de demander du travail du type computationType,
 //qu’il reçoit sous forme d’une requête de calcul.
 Request ComputationManager::getWork(ComputationType computationType) {
+   auto type = static_cast<size_t>(computationType);
    monitorIn();
-   // Si il n'a a pas de computation du bon type dans le buffer, on attend
+   // If there isn't any request of the right type in the buffer, we wait
    if (buffer[computationType].empty()) {
       if (stopped) {
          monitorOut();
          throwStopException();
       }
-      wait(computationTypeEmpty[(int) computationType]);
+      wait(emptyQueuePerType[type]);
       if (stopped) {
-         signal(computationTypeEmpty[(int) computationType]);
+         signal(emptyQueuePerType[type]);
          monitorOut();
          throwStopException();
       }
    }
    Request newReq = buffer[computationType].back();
    buffer[computationType].pop_back();
-   signal(bufferFull);
+   signal(fullQueuePerType[type]);
    monitorOut();
    return newReq;
 }
@@ -135,14 +131,13 @@ Request ComputationManager::getWork(ComputationType computationType) {
 bool ComputationManager::continueWork(int id) {
    monitorIn();
    if (stopped) {
-      std::cout << "Stopped" << std::endl;
       monitorOut();
       return false;
    }
 
-   // On cherche si le calcul est dans les résultats (i.e. en cours de calcul ou calculé)
+   // We check if the result is in the results (i.e. being computed or computed)
    auto it = std::find_if(results.begin(), results.end(),
-                          [&](const auto &pairIdResult) { return pairIdResult.first == id; });
+                          [&](const auto &pairIdResult) { return pairIdResult.id == id; });
 
    monitorOut();
    return !(it == results.end());
@@ -152,13 +147,12 @@ bool ComputationManager::continueWork(int id) {
 void ComputationManager::provideResult(Result result) {
    monitorIn();
    auto it = std::find_if(results.begin(), results.end(),
-                          [&](const auto &resultChecked) { return resultChecked.first == result.getId(); });
-   //std::cout << "provideResult: Result " << result.getId() << ", result found " << it->first<< std::endl;
+                          [&](const auto &resultChecked) { return resultChecked.id == result.getId(); });
    if (it == results.end()) {
       monitorOut();
       return;
    }
-   it->second = result;
+   it->result = result;
    signal(notExpectedResult);
    monitorOut();
 }
@@ -169,10 +163,12 @@ void ComputationManager::stop() {
 
    monitorIn();
    stopped = true;
-   // On signale sur toutes les conditions existantes
-   signal(bufferFull);
+   // We signal on every existing condition to unblock waiting threads
    signal(notExpectedResult);
-   for (auto &condition: computationTypeEmpty) {
+   for (auto &condition: emptyQueuePerType) {
+      signal(condition);
+   }
+   for (auto &condition: fullQueuePerType) {
       signal(condition);
    }
    monitorOut();
