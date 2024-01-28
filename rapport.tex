@@ -18,8 +18,8 @@ Dans cette étape, nous avons mis en place la distribution des calculs grâce au
 \texttt{getWork}.
 
 \subsection{Choix d'implémentation}
-Pour représenter le buffer contenant les calculs à réaliser, nous avons choisi d'utiliser une map ayant comme clé le
-type du calcul et comme valeur une \texttt{std::list} contenant les calculs sous forme de \texttt{Request} à réaliser de
+Pour représenter le buffer contenant les calculs à réaliser, nous avons choisi d'utiliser une \textt{std::map} ayant
+comme clé le type du calcul et comme valeur une \texttt{std::list} contenant les calculs sous forme de \texttt{Request} à réaliser de
 ce type.
 Notre
 technique consiste simplement à ajouter les calculs au début de la liste correspondante dans la map dès que
@@ -39,13 +39,16 @@ correspondante dans la map n'est pas vide. Si c'est le cas, elle appelle la mét
 afin de récupérer le dernier élément de la liste, qui sera donc le plus ancien. Si la liste est vide, elle appelle la
 méthode \texttt{wait} sur la condition correspondante dans \texttt{emptyQueuePerType} qui est un autre tableau
 contenant une \texttt{Condition} pour chaque type de calcul qui représente le fait qu'il n'y a pas de calcul de ce
-type dans le buffer. Dans ce cas, on attented donc qu'un calcul de ce type soit ajouté au buffer avant de pouvoir
+type dans le buffer. Dans ce cas, on attend donc qu'un calcul de ce type soit ajouté au buffer avant de pouvoir
 continuer.
 
 Lorsqu'un calcul est ajouté au buffer dans la méthode \texttt{requestComputation}, on signale sur la condition correspondante
 dans \texttt{emptyQueuePerType} que le buffer contient maintenant un calcul de ce type. De même, lorsqu'un calcul est
 retiré du buffer dans la méthode \texttt{getWork}, on signale sur la condition correspondante dans \texttt{fullQueuePerType}
 que le buffer contient maintenant un calcul de ce type en moins.
+
+D'une manière générale, nous appelons \texttt{monitorIn} et \texttt{monitorOut} dans toutes les méthodes, afin de
+s'assurer que les accès aux ressources partagées sont bien exclusifs.
 
 \subsection{Tests}
 L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
@@ -70,6 +73,9 @@ que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs
     0. Ceci peut être vérifié en regardant les logs. C'est le comportement attendu.
 \end{itemize}
 
+Des tests similaires ont aussi été effectués en changeant le nombre d'instances de calculateurs de chaque type et leur
+résultats a été concluant.
+
 \section{Etape 2}
 Dans cette étape nous avons mis en place la gestion des résultats grâce aux méthodes \texttt{getNextResult} et
 \texttt{provideResult}.
@@ -78,15 +84,17 @@ Dans cette étape nous avons mis en place la gestion des résultats grâce aux m
 Pour représenter la structure contenant les résultats, nous avons choisi d'utiliser une \texttt{std::list} contenant les
 résultats sous forme de \texttt{ResultWithId}. \texttt{ResultWithId} est une structure que nous avons rajoutée
 contenant un id et un résultat qui est optionel (grâce à \texttt{std::optional}). Ainis, nous pouvons ajouter le
-résultat dans la liste directement après avoir envoyé la requête au calculateur, même lorsque le résultat est encore
-en cours de calcul, ce qui nous permet de connaître l'ordre des calculs en cours ou terminé à tout moment. Dans les
+résultat dans la liste directement après avoir reçu la demande de calcul, ce qui nous permet de connaître l'ordre des
+calculs en cours ou terminés à tout moment. Dans les
 faits, un résultat est ajouté à la liste dès que \texttt{requestComputation} est appelée.
 
 La méthode \texttt{getNextResult} est en charge de récupérer le résultat le plus ancien dans la liste. Pour cela, elle
 n'as donc qu'à accéder au dernier élément contenu dans la liste. Si la partie optionelle du résultat est vide, cela
-signifie que le résultat n'est pas encore disponible et donc que le calcul est toujours en cours. Dans ce cas, on
+signifie que le résultat n'est pas encore disponible et donc que le calcul est toujours en cours (ou pas commencé).
+Dans ce
+cas, on
 appelle la méthode \texttt{wait} sur la condition \texttt{notExpectedResult}. Cette dernière est une condition qui
-représente le fait que le prochain résultat n'est pas encore disponible. On attend donc que le résultats attendu
+représente le fait que le prochain résultat n'est pas encore disponible. On attend donc que le résultat attendu
 soit disponible dans la liste avant de pouvoir continuer. Lorsque c'est le cas, on retire le résultat de la liste et
 on le retourne.
 
@@ -142,6 +150,11 @@ que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs
     \label{fig:full2}
 \end{figure}
 
+Des tests similaires ont aussi été effectués en changeant le nombre d'instances de calculateurs de chaque type et leur
+résultats a été concluant.
+
+\pagebreak
+
 \section{Etape 3}
 Dans cette étape, nous avons mis en place la possibilité d’annuler des calculs demandés par le client grâce aux méthodes
 \texttt{abortComputation} et \texttt{continueWork}.
@@ -151,13 +164,13 @@ La méthode \texttt{abortComputation} permet d’annuler un calcul en cours grâ
 cas à gérer. Si le calcul n’est pas encore en cours, il faut simplement le retirer de la map \texttt{buffer}. Dans
 ce cas, il faut signaler sur la condition \texttt{fullQueuePerType} que la queue pour ce type de calcul contient un
 calcul en moins. Si le calcul est en cours, il faut le retirer de la liste \texttt{results} et signaler sur
-la condition \texttt{notExpectedResult} pour potentiellement débloqué un thread qui attend sur ce résultat.
+la condition \texttt{notExpectedResult} pour potentiellement débloquer un thread qui attend sur ce résultat.
 Si le calcul est terminé, il faut simplement le retirer de la liste \texttt{results}.
 On notera qu'au vu de notre implémentation de \texttt{requestComputation}, qui ajoute directement un calcul demandé
 dans la liste \texttt{results}, il faut aussi retirer le calcul de cette liste s'il est demandé mais pas encore en
 cours.
 
-La méthode \texttt{continueWork} et quant à elle assez simple, puisqu'elle va simplement chercher l'id passé en
+La méthode \texttt{continueWork} est quant à elle assez simple, puisqu'elle va simplement chercher l'id passé en
 paramètre dans la liste \texttt{results}. Si l'id est présent, cela signifie que le calcul doit continuer, sinon, cela
 signifie que le calcul doit être annulé.
 
@@ -165,6 +178,7 @@ signifie que le calcul doit être annulé.
 L'environnement de test comporte 3 types de calculs différents, 2 calculateurs de type \texttt{A}, un
 calculateur de type \texttt{B} et un calculateur de type \texttt{C}. Les calculs de type \texttt{A} sont plus longs
 que les calculs de type \texttt{B} qui sont eux même plus longs que les calculs de type \texttt{C}.
+
 \begin{itemize}
     \item Les Google tests concernant l'étape 3 passent tous.
     \item Si on envoie une demande de calcul de type \texttt{A} et qu'on l'annule avant la fin, le calculateur s'arr
@@ -215,7 +229,7 @@ et \texttt{throwStopException}.
 
 \subsection{Choix d'implémentation}
 La méthode \texttt{stop} permet de demander l'arrêt du buffer.  Afin de modéliser
-le fait que le buffer est arrêté, nous avons créé un attribut booléen \texttt{stopped} qui est innitialisé à \texttt{false}
+le fait que le buffer est arrêté, nous avons créé un attribut booléen \texttt{stopped} qui est initialisé à \texttt{false}
 au lancement du programme. Lorsque la méthode \texttt{stop} est appelée, on met cet attribut à \texttt{true}. De plus,
 on signale sur toutes les conditions existantes dans le buffer afin de débloquer tous les threads qui attendent sur
 ces dernières, afin qu'ils puissent s'arrêter.

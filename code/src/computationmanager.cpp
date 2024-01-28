@@ -16,8 +16,6 @@ ComputationManager::ComputationManager(int maxQueueSize) : MAX_TOLERATED_QUEUE_S
 
 int ComputationManager::nextId = 0;
 
-// Cette méthode permet de demander d’effectuer un calcul et retourne un identifiant (id), donné
-// par le buffer, correspondant au calcul.
 int ComputationManager::requestComputation(Computation c) {
    auto type = static_cast<size_t>(c.computationType);
    monitorIn();
@@ -43,7 +41,6 @@ int ComputationManager::requestComputation(Computation c) {
    return id;
 }
 
-// Cette méthode permet d’annuler un calcul en cours grâce à son identifiant.
 void ComputationManager::abortComputation(int id) {
 
    monitorIn();
@@ -73,11 +70,9 @@ void ComputationManager::abortComputation(int id) {
       monitorOut();
       return;
    }
+   monitorOut();
 }
 
-// Cette méthode permet de demander les résultats au buffer. Les résultats seront retournés dans
-//le même ordre que l’ordre des demandes de calcul. Cette méthode ne doit pas retourner les
-//résultats de calculs qui ont été annulés. Elle est potentiellement bloquante.
 Result ComputationManager::getNextResult() {
    monitorIn();
    // If there isn't any result or the result is not the one we are waiting for, we wait
@@ -100,8 +95,6 @@ Result ComputationManager::getNextResult() {
    return result;
 }
 
-// Cette méthode permet au calculateur de demander du travail du type computationType,
-//qu’il reçoit sous forme d’une requête de calcul.
 Request ComputationManager::getWork(ComputationType computationType) {
    auto type = static_cast<size_t>(computationType);
    monitorIn();
@@ -125,8 +118,6 @@ Request ComputationManager::getWork(ComputationType computationType) {
    return newReq;
 }
 
-// Cette méthode permet au calculateur de demander s’il doit continuer à travailler sur le calcul
-//avec l’identifiant donné.
 bool ComputationManager::continueWork(int id) {
    monitorIn();
    if (stopped) {
@@ -142,7 +133,6 @@ bool ComputationManager::continueWork(int id) {
    return !(it == results.end());
 }
 
-// Cette méthode permet au calculateur de retourner le résultat du calcul.
 void ComputationManager::provideResult(Result result) {
    monitorIn();
    auto it = std::find_if(results.begin(), results.end(),
@@ -156,8 +146,6 @@ void ComputationManager::provideResult(Result result) {
    monitorOut();
 }
 
-// la fonction stop() devra libérer tous les threads en attente sur le buffer et devra empêcher la mise en
-// attente de tout thread lors d’un appel à une méthode du buffer après l’appel de stop().
 void ComputationManager::stop() {
 
    monitorIn();
