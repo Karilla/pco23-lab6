@@ -54,7 +54,7 @@ void ComputationManager::abortComputation(int id) {
          list.second.erase(it);
          signal(fullQueuePerType[type]);
          monitorOut();
-         return;
+         break;
       }
    }
 
